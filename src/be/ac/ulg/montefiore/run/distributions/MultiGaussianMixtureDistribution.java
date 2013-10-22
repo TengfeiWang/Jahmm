@@ -2,6 +2,8 @@
 
 /*
   *  Copyright (c) 2004-2006, Jean-Marc Francois.
+  *  Copyright (c) 2013, Aubry Cholleton : 
+  *  Adaptation of GaussianMixtureDistribution to Multivariate Gaussians
  *
  *  This file is part of Jahmm.
  *  Jahmm is free software; you can redistribute it and/or modify
