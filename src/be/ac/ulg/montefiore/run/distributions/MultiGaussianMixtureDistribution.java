@@ -57,7 +57,7 @@ implements RandomDistribution
     distributions = new MultiGaussianDistribution[nbGaussians];
     proportions = new double[nbGaussians];
     double means[][] = new double[nbGaussians][dimension];
-    double variances[][][] = new double[nbGaussians][dimension][dimension];
+    double covariances[][][] = new double[nbGaussians][dimension][dimension];
     
     for (int i = 0; i < nbGaussians; i++) {
       for (int j = 0; j < dimension; j++) {
@@ -66,11 +66,11 @@ implements RandomDistribution
       }
     }
     
-    Arrays.fill(variances, 1.);
+    Arrays.fill(covariances, 1.);
     Arrays.fill(proportions, 1. / ((double) nbGaussians));
     
     for (int i = 0; i < distributions.length; i++)
-      distributions[i] = new MultiGaussianDistribution(means[i], variances[i]);
+      distributions[i] = new MultiGaussianDistribution(means[i], covariances[i]);
   }
   
   
@@ -85,20 +85,20 @@ implements RandomDistribution
    *             be normalized, but each element must be positive and the sum
    *             of its elements must be strictly positive.
    */
-  public GaussianMixtureDistribution(double[][] means, double[][][] variances,
+  public GaussianMixtureDistribution(double[][] means, double[][][] covariances,
       double[] proportions)
   {
-    if (means.length == 0 || means.length != variances.length ||
+    if (means.length == 0 || means.length != covariances.length ||
         means.length != proportions.length ||
-        means[0].length != variances[0].length ||
-        variances[0].length != variances[0][0].length)
+        means[0].length != covariances[0].length ||
+        covariances[0].length != covariances[0][0].length)
       throw new IllegalArgumentException();
     
     distributions = new MultiGaussianDistribution[means.length];
     this.proportions = new double[means.length];
     
     for (int i = 0; i < distributions.length; i++)
-      distributions[i] = new MultiGaussianDistribution(means[i], variances[i]);
+      distributions[i] = new MultiGaussianDistribution(means[i], covariances[i]);
     
     double sum = 0.;
     for (int i = 0; i < proportions.length; i++)
@@ -119,6 +119,10 @@ implements RandomDistribution
     return distributions.length;
   }
   
+  public int dimension()
+  {
+    return distributions[0].dimension();
+  }
   
   /**
    * Returns the distributions composing this mixture.
@@ -143,7 +147,7 @@ implements RandomDistribution
   }
   
   
-  public double generate() 
+  public double[] generate() 
   {
     double r = random.nextDouble();
     double sum = 0.;  
@@ -159,12 +163,12 @@ implements RandomDistribution
   }
   
   
-  public double probability(double n)
+  public double probability(double[] v)
   {
     double sum = 0.;
     
     for (int i = 0; i < distributions.length; i++)
-      sum += distributions[i].probability(n) * proportions[i];
+      sum += distributions[i].probability(v) * proportions[i];
     
     return sum;
   }

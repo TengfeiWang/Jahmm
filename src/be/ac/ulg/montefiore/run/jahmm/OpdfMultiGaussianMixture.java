@@ -2,6 +2,8 @@
 
 /*
   *  Copyright (c) 2004-2006, Jean-Marc Francois.
+  *  Copyright (c) 2013, Aubry Cholleton:
+  *  Adaptation of OpdfGaussianMixture to OpdfMultiGaussianMixture
  *
  *  This file is part of Jahmm.
  *  Jahmm is free software; you can redistribute it and/or modify
@@ -26,8 +28,8 @@ import java.text.NumberFormat;
 import java.util.Arrays;
 import java.util.Collection;
 
-import be.ac.ulg.montefiore.run.distributions.GaussianDistribution;
-import be.ac.ulg.montefiore.run.distributions.GaussianMixtureDistribution;
+import be.ac.ulg.montefiore.run.distributions.MultiGaussianDistribution;
+import be.ac.ulg.montefiore.run.distributions.MultiGaussianMixtureDistribution;
 
 
 /**
@@ -35,10 +37,11 @@ import be.ac.ulg.montefiore.run.distributions.GaussianMixtureDistribution;
  *
  * @author Benjamin Chung (Creation)
  * @author Jean-Marc Francois (Adaptations / small fix)
+ * @author Aubry Cholleton (Adaptations to multivariate gaussian mixtures models)
  */
-public class OpdfGaussianMixture implements Opdf<ObservationVector>
+public class OpdfMultiGaussianMixture implements Opdf<ObservationVector>
 {
-  private GaussianMixtureDistribution distribution;
+  private MultiGaussianMixtureDistribution distribution;
   
   
   /**
@@ -48,9 +51,9 @@ public class OpdfGaussianMixture implements Opdf<ObservationVector>
    *
    * @param nbGaussians The number of gaussians that compose this mixture.
    */
-  public OpdfGaussianMixture(int nbGaussians)
+  public OpdfMultiGaussianMixture(int nbGaussians)
   {
-    distribution = new GaussianMixtureDistribution(nbGaussians);
+    distribution = new MultiGaussianMixtureDistribution(nbGaussians);
   }
   
   
@@ -64,10 +67,10 @@ public class OpdfGaussianMixture implements Opdf<ObservationVector>
    *             be normalized, but each element must be positive and the sum
    *             of its elements must be strictly positive.
    */
-  public OpdfGaussianMixture(double[] means, double[] variances,
+  public OpdfMultiGaussianMixture(double[][] means, double[][][] covariances,
       double[] proportions)
   {
-    distribution = new GaussianMixtureDistribution(means, variances, 
+    distribution = new MultiGaussianMixtureDistribution(means, covariances, 
         proportions);
   }
   
@@ -94,6 +97,10 @@ public class OpdfGaussianMixture implements Opdf<ObservationVector>
     return distribution.nbGaussians();
   }
   
+  public int dimension()
+  {
+    return distribution.dimension();
+  }
   
   /**
    * Returns the mixing proportions of each gaussian distribution.
@@ -111,10 +118,10 @@ public class OpdfGaussianMixture implements Opdf<ObservationVector>
    * 
    * @return A copy of the means array.
    */
-  public double[] means()
+  public double[][] means()
   {   
-    double[] means = new double[nbGaussians()];
-    GaussianDistribution[] distributions = distribution.distributions(); 
+    double[][] means = new double[nbGaussians()][dimension()];
+    MultiGaussianDistribution[] distributions = distribution.distributions(); 
 
     for (int i = 0; i < distributions.length; i++)
       means[i] = distributions[i].mean();
@@ -128,15 +135,15 @@ public class OpdfGaussianMixture implements Opdf<ObservationVector>
    * 
    * @return A copy of the means array.
    */
-  public double[] variances()
+  public double[][][] covariances()
   {
-    double[] variances = new double[nbGaussians()];
+    double[][][] covariances = new double[nbGaussians()][dimension()][dimension()];
     GaussianDistribution[] distributions = distribution.distributions(); 
 
     for (int i = 0; i < distributions.length; i++)
-      variances[i] = distributions[i].variance();
+      covariances[i] = distributions[i].covariance();
     
-    return variances;
+    return covariances;
   }
   
   
@@ -162,6 +169,9 @@ public class OpdfGaussianMixture implements Opdf<ObservationVector>
    */
   public void fit(Collection<? extends ObservationVector> co)
   {
+    if (co.isEmpty())
+      throw new IllegalArgumentException("Empty observation set");
+
     double[] weights = new double[co.size()];
     Arrays.fill(weights, 1. / co.size());
     
@@ -203,15 +213,15 @@ public class OpdfGaussianMixture implements Opdf<ObservationVector>
     if (co.isEmpty() || co.size() != weights.length)
       throw new IllegalArgumentException();
     
-    ObservationReal[] o = co.toArray(new ObservationReal[co.size()]);
+    ObservationVector[] o = co.toArray(new ObservationVector[co.size()]);
     
     double[][] delta = getDelta(o);
     double[] newMixingProportions = 
       computeNewMixingProportions(delta, o, weights);
-    double[] newMeans = computeNewMeans(delta, o, weights);
-    double[] newVariances = computeNewVariances(delta, o, weights);
+    double[][] newMeans = computeNewMeans(delta, o, weights);
+    double[][][] newCovariances = computeNewCovariances(delta, o, weights);
     
-    distribution = new GaussianMixtureDistribution(newMeans, newVariances,
+    distribution = new GaussianMixtureDistribution(newMeans, newCovariances,
         newMixingProportions);
   }
   
@@ -225,7 +235,7 @@ public class OpdfGaussianMixture implements Opdf<ObservationVector>
     
     for (int i = 0; i < distribution.nbGaussians(); i++) {
       double[] proportions = distribution.proportions();
-      GaussianDistribution[] distributions =
+      MultiGaussianDistribution[] distributions =
         distribution.distributions();
       
       for (int t = 0; t < o.length; t++)
@@ -265,25 +275,31 @@ public class OpdfGaussianMixture implements Opdf<ObservationVector>
   /*
    * Estimates new mean values of each Gaussian given delta.
    */
-  private double[] computeNewMeans(double[][] delta, ObservationVector[] o,
+  private double[][] computeNewMeans(double[][] delta, ObservationVector[] o,
       double[] weights)
   {
-    double[] num = new double[distribution.nbGaussians()];
+    double[][] num = new double[distribution.nbGaussians()][distribution.dimension()];
     double[] sum = new double[distribution.nbGaussians()];
     
     Arrays.fill(num, 0.0);
     Arrays.fill(sum, 0.0);
     
-    for (int i = 0; i < distribution.nbGaussians(); i++)
+    for (int i = 0; i < distribution.nbGaussians(); i++) {
       for (int t = 0; t < o.length; t++) {
-        num[i] += weights[t] * delta[i][t] * o[t].value;
+        for (int d = 0; d < distribution.dimension(); d++) {
+          num[i][d] += weights[t] * delta[i][t] * o[t][d].value;
+        }
         sum[i] += weights[t] * delta[i][t];
       }
+    }
     
-    double[] newMeans = new double[distribution.nbGaussians()];
-    for (int i = 0; i < distribution.nbGaussians(); i++)
-      newMeans[i] = num[i] / sum[i];
-    
+    double[][] newMeans = new double[distribution.nbGaussians()][distribution.dimension()];
+    for (int i = 0; i < distribution.nbGaussians(); i++) {
+      for (int d = 0; d < distribution.dimension(); d++) {
+        newMeans[i][d] = num[i][d] / sum[i];
+      }
+    }
+
     return newMeans;
   }
   
@@ -291,31 +307,37 @@ public class OpdfGaussianMixture implements Opdf<ObservationVector>
   /*
    * Estimates new variance values of each Gaussian given delta.
    */
-  private double[] computeNewVariances(double[][] delta, ObservationVector[] o,
+  private double[][][] computeNewCovariances(double[][] delta, ObservationVector[] o,
       double[] weights)
   {
-    double[] num = new double[distribution.nbGaussians()];
+    double[][] num = new double[distribution.nbGaussians()][distribution.dimension()];
     double[] sum = new double[distribution.nbGaussians()];
     
     Arrays.fill(num, 0.);
     Arrays.fill(sum, 0.);
     
     for (int i = 0; i < distribution.nbGaussians(); i++) {
-      GaussianDistribution[] distributions = distribution.distributions();
+      MultiGaussianDistribution[] distributions = distribution.distributions();
       
       for (int t = 0; t < o.length; t++) {
-        num[i] += weights[t] * delta[i][t] *
-        (o[t].value - distributions[i].mean()) *
-        (o[t].value - distributions[i].mean());
+        for (int x = 0; x < distribution.dimension(); x++) {
+          num[i][x] += weights[t] * delta[i][t] *
+          (o[t][x].value - distributions[i].mean()) *
+          (o[t][x].value - distributions[i].mean());
+        }
         sum[i] += weights[t] * delta[i][t];
       }
     }
     
-    double[] newVariances = new double[distribution.nbGaussians()];
-    for (int i = 0; i < distribution.nbGaussians(); i++) 
-      newVariances[i] = num[i] / sum[i];
+    double[][][] newCovariances = new double[distribution.nbGaussians()][distribution.dimension()][distribution.dimension()];
+    Arrays.fill(newCovariances, 0.);
+    for (int i = 0; i < distribution.nbGaussians(); i++) {
+      for (int x = 0; x < distribution.dimension(); x++) {
+        newCoariances[i][x][x] = num[i][x] / sum[i];
+      }
+    }
     
-    return newVariances;
+    return newCovariances;
   }
   
   
@@ -340,14 +362,14 @@ public class OpdfGaussianMixture implements Opdf<ObservationVector>
     
     double[] proportions = proportions();
     double[] means = means();
-    double[] variances = variances();
+    double[] covariances = covariances();
     
     for (int i = 0; i < distribution.nbGaussians(); i++) {
       s += "Gaussian " + (i+1) + ":\n";
       s += "\tMixing Prop = " + numberFormat.format(proportions[i]) +
       "\n";
       s += "\tMean = " + numberFormat.format(means[i]) + "\n";
-      s += "\tVariance = " + numberFormat.format(variances[i]) + "\n";
+      s += "\tCovariance matrix = " + numberFormat.format(covariances[i]) + "\n";
     }
     
     return s;
