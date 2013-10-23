@@ -34,6 +34,7 @@ public class OpdfMultiGaussianMixtureFactory
 implements OpdfFactory<OpdfMultiGaussianMixture>
 {
     final private int gaussiansNb;
+    final private int dimension;
     
     
     /**
@@ -42,14 +43,15 @@ implements OpdfFactory<OpdfMultiGaussianMixture>
      * @param gaussiansNb The number of Gaussian distributions involved in the
      *                    generated distributions.
      */
-    public OpdfMultiGaussianMixtureFactory(int gaussiansNb)
+    public OpdfMultiGaussianMixtureFactory(int gaussiansNb, int dimension)
     {
         this.gaussiansNb = gaussiansNb;
+        this.dimension = dimension;
     }
     
     
     public OpdfMultiGaussianMixture factor()
     {
-        return new OpdfMultiGaussianMixture(gaussiansNb);
+        return new OpdfMultiGaussianMixture(gaussiansNb, dimension);
     }
 }

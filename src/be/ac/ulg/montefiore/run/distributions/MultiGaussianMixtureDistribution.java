@@ -33,7 +33,7 @@ import java.util.*;
  * @author Jean-Marc Francois (based on code from Benjamin Chung)
  */
 public class MultiGaussianMixtureDistribution
-implements RandomDistribution
+implements MultiRandomDistribution
 { 
   static private final Random random = new Random();
   
@@ -85,7 +85,7 @@ implements RandomDistribution
    *             be normalized, but each element must be positive and the sum
    *             of its elements must be strictly positive.
    */
-  public GaussianMixtureDistribution(double[][] means, double[][][] covariances,
+  public MultiGaussianMixtureDistribution(double[][] means, double[][][] covariances,
       double[] proportions)
   {
     if (means.length == 0 || means.length != covariances.length ||
@@ -129,7 +129,7 @@ implements RandomDistribution
    *
    * @return A copy of the distributions array.
    */
-  public GaussianDistribution[] distributions()
+  public MultiGaussianDistribution[] distributions()
   {
     return distributions.clone();
   }
