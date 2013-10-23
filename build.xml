@@ -134,11 +134,6 @@
             includes="**/run/jahmm/** **/run/distributions/**"
             excludes="**run/jahmm/apps"
           />
-          <signjar alias="francois" storepass="${keystore-password}">
-	    <fileset dir=".">
-              <include name="${lib.dir}/jahmm*.jar" />
-            </fileset>
-	  </signjar>
    	</target>
 
 
