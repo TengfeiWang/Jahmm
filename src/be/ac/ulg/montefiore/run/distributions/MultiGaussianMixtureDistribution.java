@@ -63,10 +63,13 @@ implements MultiRandomDistribution
       for (int j = 0; j < dimension; j++) {
         // TODO Adapt to the multivariate case if needed
         means[i][j] = (1. + 2. * (double) i) / (2. * (double) nbGaussians);
+        
       }
     }
-    
-    Arrays.fill(covariances, 1.);
+    for (double[][] matrix : covariances) {
+      for (int i = 0; i < dimension; i++)
+        matrix[i][i] = 1.;
+    }
     Arrays.fill(proportions, 1. / ((double) nbGaussians));
     
     for (int i = 0; i < distributions.length; i++)

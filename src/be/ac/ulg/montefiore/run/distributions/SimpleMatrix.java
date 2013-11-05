@@ -141,6 +141,32 @@ class SimpleMatrix
 	static boolean isSquare(double[][] m)
 	{
 		return (nbRows(m) == nbColumns(m));
+
+	}
+
+	static boolean isDiagonal(double[][] m)
+	{
+		if (!isSquare(m))
+			return false;
+
+		for (int r = 0; r < nbRows(m); r++)
+			for (int c = 0; c < nbRows(m); c++)
+				if (c != r && m[r][c] != 0)
+					return false;
+
+		return true;
+	}
+
+	static boolean isInvertibleDiagonal(double[][] m)
+	{
+		if (!isDiagonal(m))
+			return false;
+
+		for (int d = 0; d < nbRows(m); d++)
+			if (m[d][d] == 0)
+				return false;
+
+		return true;
 	}
 	
 	
@@ -229,7 +255,7 @@ class SimpleMatrix
 		return p;
 	}
 	
-	
+	/*
 	static double[][] decomposeCholesky(double[][] m)
 	{
 		if (!isSquare(m))
@@ -263,13 +289,14 @@ class SimpleMatrix
 		}
 		
 		return l;
-	}
+	}*/
 	
 	
 	/*
 	 * Computes the determinant of a matrix given its cholesky matrix
 	 * decomposition.
 	 */
+	/*
 	static double determinantCholesky(double[][] l)
 	{
 		if (!isSquare(l))
@@ -280,11 +307,24 @@ class SimpleMatrix
 			d *= l[i][i];
 		
 		return d * d;
+	}*/
+
+	static double determinantDiagonal(double[][] l)
+	{
+		if (!isDiagonal(l))
+			throw new IllegalArgumentException("Matrix is not diagonal");
+		
+		double d = 1.;
+		for (int i = 0; i < nbRows(l); i++)
+			d *= l[i][i];
+		
+		return d;
 	}
 	
 	
 	/* Computes the inverse of a matrix given its cholesky matrix
 	 decomposition. */
+	 /*
 	static double[][] inverseCholesky(double[][] l)
 	{
 		if (!isSquare(l))
@@ -297,6 +337,22 @@ class SimpleMatrix
 			for (int c = 0; c < nbRows(l); c++)
 				for (int i = 0; i < nbRows(l); i++)
 					ic[r][c] += li[i][r] * li[i][c];
+		
+		return ic;
+	}*/
+
+	static double[][] inverseDiagonal(double[][] l)
+	{
+		if (!isInvertibleDiagonal(l)) {
+			System.out.println("Covariance matrix : ");
+			System.out.println(toString(l));
+			throw new IllegalArgumentException("Matrix is not invertible diagonal");
+		}
+		
+		double[][] ic = matrixIdentity(nbRows(l));
+		
+		for (int r = 0; r < nbRows(l); r++)
+					ic[r][r] = 1. / l[r][r];
 		
 		return ic;
 	}

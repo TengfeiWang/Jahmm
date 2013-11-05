@@ -42,6 +42,7 @@ import be.ac.ulg.montefiore.run.distributions.MultiGaussianMixtureDistribution;
 public class OpdfMultiGaussianMixture implements Opdf<ObservationVector>
 {
   private MultiGaussianMixtureDistribution distribution;
+  private final double threshold = Math.pow(10, -4);
   
   
   /**
@@ -238,11 +239,19 @@ public class OpdfMultiGaussianMixture implements Opdf<ObservationVector>
       MultiGaussianDistribution[] distributions =
         distribution.distributions();
       
-      for (int t = 0; t < o.length; t++)
-        delta[i][t] = proportions[i] *
-        distributions[i].probability(o[t].value) / probability(o[t]);
+      for (int t = 0; t < o.length; t++) {
+        double value = proportions[i] * distributions[i].probability(o[t].value) / probability(o[t]);
+        if (value > threshold)
+          delta[i][t] = value;
+        else
+          delta[i][t] = threshold;
+
+      }
     }
-      
+    
+    System.out.println("Delta : ");
+    System.out.println(toString(delta));
+
     return delta;
   }
   
@@ -254,19 +263,33 @@ public class OpdfMultiGaussianMixture implements Opdf<ObservationVector>
       ObservationVector[] o, double[] weights)
   {
     double[] num = new double[distribution.nbGaussians()];
-    double sum = 0.0;
+    double sum = 0.;
+
+    System.out.println("Delta : ");
+    System.out.println(toString(delta));
+    System.out.println("Weights : ");
+    System.out.println(toString(weights));
+
     
-    Arrays.fill(num, 0.0);
+    Arrays.fill(num, 0.);
     
-    for (int i = 0; i < distribution.nbGaussians(); i++)
+    for (int i = 0; i < distribution.nbGaussians(); i++) {
       for (int t = 0; t < weights.length; t++) {
         num[i] += weights[t] * delta[i][t];
         sum += weights[t] * delta[i][t];
       }
+    }
+    System.out.println("Num : ");
+    System.out.println(toString(num));
+    System.out.println("Sum : ");
+    System.out.println(sum);
     
     double[] newMixingProportions = new double[distribution.nbGaussians()];
     for (int i = 0; i < distribution.nbGaussians(); i++) 
       newMixingProportions[i] = num[i]/sum;
+
+    System.out.println("New mixing proportions : ");
+    System.out.println(toString(newMixingProportions));
     
     return newMixingProportions;
   }
@@ -281,8 +304,10 @@ public class OpdfMultiGaussianMixture implements Opdf<ObservationVector>
     double[][] num = new double[distribution.nbGaussians()][distribution.dimension()];
     double[] sum = new double[distribution.nbGaussians()];
     
-    Arrays.fill(num, 0.0);
-    Arrays.fill(sum, 0.0);
+    for (double[] vector : num) {
+      Arrays.fill(vector, 0.);
+    }
+    Arrays.fill(sum, 0.);
     
     for (int i = 0; i < distribution.nbGaussians(); i++) {
       for (int t = 0; t < o.length; t++) {
@@ -300,6 +325,8 @@ public class OpdfMultiGaussianMixture implements Opdf<ObservationVector>
       }
     }
 
+    System.out.println("New means : ");
+    System.out.println(toString(newMeans));
     return newMeans;
   }
   
@@ -313,7 +340,9 @@ public class OpdfMultiGaussianMixture implements Opdf<ObservationVector>
     double[][] num = new double[distribution.nbGaussians()][distribution.dimension()];
     double[] sum = new double[distribution.nbGaussians()];
     
-    Arrays.fill(num, 0.);
+    for (double[] vector : num) {
+      Arrays.fill(vector, 0.);
+    }
     Arrays.fill(sum, 0.);
     
     for (int i = 0; i < distribution.nbGaussians(); i++) {
@@ -330,10 +359,18 @@ public class OpdfMultiGaussianMixture implements Opdf<ObservationVector>
     }
     
     double[][][] newCovariances = new double[distribution.nbGaussians()][distribution.dimension()][distribution.dimension()];
-    Arrays.fill(newCovariances, 0.);
+    for (double[][] matrix : newCovariances) {
+      for (double[] vector : matrix) {
+        Arrays.fill(vector, 0.);
+      }
+    }
     for (int i = 0; i < distribution.nbGaussians(); i++) {
       for (int x = 0; x < distribution.dimension(); x++) {
-        newCovariances[i][x][x] = num[i][x] / sum[i];
+        double value = num[i][x] / sum[i];
+        if (value > threshold)
+          newCovariances[i][x][x] = num[i][x] / sum[i];
+        else
+          newCovariances[i][x][x] = threshold;
       }
     }
     
@@ -358,23 +395,70 @@ public class OpdfMultiGaussianMixture implements Opdf<ObservationVector>
   
   public String toString(NumberFormat numberFormat)
   {
-    String s = "Gaussian mixture distribution --- ";
+    String s = "Gaussian mixture distribution --- \n";
     
     double[] proportions = proportions();
     double[][] means = means();
     double[][][] covariances = covariances();
     
     for (int i = 0; i < distribution.nbGaussians(); i++) {
-      s += "Gaussian " + (i+1) + ":\n";
+      s += "\tMulti-Variate Gaussian Distribution " + (i+1) + ":\n";
       s += "\tMixing Prop = " + numberFormat.format(proportions[i]) +
       "\n";
-      s += "\tMean = " + numberFormat.format(means[i]) + "\n";
-      s += "\tCovariance matrix = " + numberFormat.format(covariances[i]) + "\n";
+      s += "\tMean: [ ";
+      for (int j = 0; j < means[i].length; j++)
+        s += numberFormat.format(means[i][j]) + " ";
+      s += " ] \n";
+      s += "\tCovariance: [\n";
+      s += toString(covariances[i]);
     }
     
     return s;
-  }    
+  } 
 
+  static int nbRows(double[][] m)
+  {
+    return m.length;
+  }
+  
+  
+  static int nbColumns(double[][] m)
+  {
+    return m[0].length;
+  }
+  
+  
+  static int dimension(double[] v)
+  {
+    return v.length;
+  }
+
+  static String toString(double[][] m)
+    {
+      String s = "[";
+      
+      for (int r = 0; r < nbRows(m); r++) {
+        s += "[";
+        
+        for (int c = 0; c < nbColumns(m); c++)
+          s += " " + m[r][c];
+        
+        s += " ]\n";
+      }
+      
+      return s + " ]\n";
+    }
+    
+    
+    static String toString(double[] v)
+    {
+      String s = "[";
+      
+      for (int r = 0; r < dimension(v); r++)
+        s += " " + v[r];
+      
+      return s + " ]\n";
+    }
 
   private static final long serialVersionUID = 1L;
 }

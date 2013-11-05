@@ -34,9 +34,8 @@ implements MultiRandomDistribution
 	final private int dimension;
 	final private double[] mean;
 	final private double[][] covariance;
-	private double[][] covarianceL = null; // covariance' Cholesky decomposition
 	private double[][] covarianceInv = null;
-	private double covarianceDet;
+	private double covarianceDet = Double.NaN;
 	private final static Random randomGenerator = new Random();
 	
 	
@@ -110,7 +109,7 @@ implements MultiRandomDistribution
 		return SimpleMatrix.matrix(covariance);
 	}
 	
-	
+	/*
 	private double[][] covarianceL()
 	{
 		if (covarianceL == null) {
@@ -120,12 +119,12 @@ implements MultiRandomDistribution
 		
 		return covarianceL;
 	}
-	
+	*/
 	
 	private double[][] covarianceInv()
 	{
 		if (covarianceInv == null)
-			covarianceInv = SimpleMatrix.inverseCholesky(covarianceL());
+			covarianceInv = SimpleMatrix.inverseDiagonal(covariance());
 		
 		return covarianceInv;
 	}
@@ -138,7 +137,8 @@ implements MultiRandomDistribution
 	 */
 	public double covarianceDet()
 	{
-		covarianceL();
+		if (Double.isNaN(covarianceDet))
+			covarianceDet = SimpleMatrix.determinantDiagonal(covariance);
 		
 		return covarianceDet;
 	}
@@ -158,7 +158,7 @@ implements MultiRandomDistribution
 		for (int i = 0; i < dimension; i++)
 			d[i] = randomGenerator.nextGaussian();
 		
-		return SimpleMatrix.plus(SimpleMatrix.times(covarianceL(), d), mean);
+		return SimpleMatrix.plus(SimpleMatrix.times(covariance(), d), mean);
 	}
 	
 	
