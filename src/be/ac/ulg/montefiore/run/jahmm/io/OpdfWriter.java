@@ -56,7 +56,8 @@ public abstract class OpdfWriter<O extends Opdf<?>>
 	throws IOException
 	{
 		DecimalFormat formatter = new DecimalFormat();
-		
+		formatter.setParseBigDecimal(true);
+		formatter.setMinimumFractionDigits(16);
 		writer.write("[");
 		
 		for (int i = 0; i < array.length; i++)
