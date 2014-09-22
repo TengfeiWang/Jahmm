@@ -22,7 +22,10 @@ MULTIVARIATE GAUSSIAN MIXTURES SUPPORT
 This is a fork of the Jahmm library which aims at supporting
 Multivariate Gaussian Mixtures in Hidden Markov Models,
 for applications in Biometrics. 
+
 For questions regarding MGM implementation, contact aubry.cholleton@epfl.ch.
+
+Example use case : https://github.com/aubry74/WebSignature
 
 
 
