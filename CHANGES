@@ -1,6 +1,14 @@
 CHANGES
 =======
 
+0.7.0 (experimental fork to support GMM)
+---------------------------------------
+- Implementation of MultiGaussianMixtureDistribution
+- Implementation of OpdfMultiGaussianMixture
+- Use only diagonal covariance matrix
+- Threshold covariance values to avoid computational issues
+- Implementation of the corresponding writers/readers
+
 0.6.0
 -----
 - Major modifications in the way genericity is used.
